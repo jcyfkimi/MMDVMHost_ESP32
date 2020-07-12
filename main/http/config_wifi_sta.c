@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <esp_wifi.h>
 #include <esp_event.h>
 #include <esp_log.h>
@@ -5,6 +8,8 @@
 #include <sys/param.h>
 #include <esp_http_server.h>
 #include "config_wifi_sta.h"
+#include "nvs_read_write.h"
+#include "config.h"
 
 static const char *TAG = "Html_Config_Wifi";
 static esp_err_t hello_get_handler(httpd_req_t *req);
@@ -65,6 +70,8 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
 {
     char*  buf;
     size_t buf_len;
+    struct mmdvm_wifi_info w_info;
+    esp_err_t ret;
 
     /* Get header value string length and allocate memory for length + 1,
      * extra byte for null termination */
@@ -104,20 +111,25 @@ static esp_err_t hello_get_handler(httpd_req_t *req)
         if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
             ESP_LOGI(TAG, "Found URL query => %s", buf);
             char param[32];
+            memset(&w_info, 0, sizeof(w_info));
             /* Get value of expected key from query string */
             if (httpd_query_key_value(buf, "ssid", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => ssid=%s", param);
-                //strncpy(g_wifi_sta_ssid, param, sizeof(param));
+                strncpy(w_info.ssid, param, strlen(param));
+                w_info.is_set = 0x01;
             }
             if (httpd_query_key_value(buf, "password", param, sizeof(param)) == ESP_OK) {
                 ESP_LOGI(TAG, "Found URL query parameter => password=%s", param);
-                //strncpy(g_wifi_sta_pwd, param, sizeof(param));
-            }
-            if (httpd_query_key_value(buf, "query2", param, sizeof(param)) == ESP_OK) {
-                ESP_LOGI(TAG, "Found URL query parameter => query2=%s", param);
+                strncpy(w_info.pwd, param, strlen(param));
             }
         }
         free(buf);
+    }
+
+    if(w_info.is_set == 0x01)
+    {
+        ret = nvs_write_wifi(&w_info, sizeof(w_info));
+        ESP_ERROR_CHECK(ret);
     }
 
     /* Set some custom headers */
