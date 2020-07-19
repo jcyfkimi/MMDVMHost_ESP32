@@ -19,13 +19,11 @@
 #include "lwip/sys.h"
 
 #include "soft_ap.h"
+#include "station.h"
 #include "config_wifi_sta.h"
 #include "nvs_read_write.h"
 
 static const char *TAG = "MMDVMHost_ESP32";
-
-char g_wifi_sta_ssid[32] = {0};
-char g_wifi_sta_pwd[64] = {0};
 
 void app_main()
 {
@@ -53,6 +51,15 @@ void app_main()
       if(0x01 == w_info.is_set)
       {
         ESP_LOGI(TAG, "Wifi info is set, start connecting to wifi, ssid = %s, pwd = %s", w_info.ssid, w_info.pwd);
+        ret = wifi_init_sta(&w_info);
+        if(ESP_OK != ret)
+        {
+          ESP_LOGW(TAG, "Wifi connect failed, please try again.");
+        }
+        else
+        {
+          ESP_LOGI(TAG, "Wifi connect OK, start network threads");
+        }
       }
       else
       {
